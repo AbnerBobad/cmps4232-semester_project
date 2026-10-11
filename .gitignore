@@ -1,0 +1,12 @@
+# Runtime logs / generated artifacts
+*.log
+*.tar.gz
+*.tgz
+
+# Local secrets / credentials
+*.env
+secrets/
+
+# OS cruft
+.DS_Store
+Thumbs.db
