@@ -1,193 +1,185 @@
-#!/usr/bin/env bash
+#!/bin/bash
+# =========================================================
+# sys_init.sh - Interactive User Provisioning Script
+# CMPS4232 Systems Administration - Phase 1
 #
-# sys_init.sh - CMPS4232 Phase 1
-# Interactive user provisioning for the /srv group hierarchy.
-#
-# Prompts the administrator for a username, primary group, optional secondary
-# groups, and an initial password. It then:
-#   1. creates the primary/secondary groups if they do not already exist
-#   2. creates the user account with the correct shell and home directory
-#   3. sets the initial password
-#   4. forces a password change on first login (chage)
-#   5. appends custom aliases + prompt styling to the user's ~/.bashrc
-#
-# All normal output and error output is timestamped and appended to
-# /var/log/sys_init.log (stdout via '>'/'>>', stderr via '2>'/'2>>').
+# What this script does:
+#   1. Asks for a username, primary group, and password
+#   2. Checks that the input is valid
+#   3. Creates the user account (home dir, bash shell)
+#   4. Forces a password change at first login (chage -d 0)
+#   5. Adds aliases and a custom prompt to the user's .bashrc
+#   6. Writes everything to /var/log/sys_init.log
 #
 # Usage: sudo ./sys_init.sh
-#
-set -uo pipefail
+# =========================================================
 
-readonly LOG_FILE="/var/log/sys_init.log"
-readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-readonly BASHRC_TEMPLATE="${SCRIPT_DIR}/bashrc.template"
-readonly USER_SHELL="/bin/bash"
-readonly USER_RE='^[a-z_][a-z0-9_-]{0,31}$'
-readonly GROUP_RE='^[a-z_][a-z0-9_-]{0,31}$'
-readonly MIN_PW_LEN=8
+LOG="/var/log/sys_init.log"
 
-# ---------------------------------------------------------------------------
-# Logging
-# ---------------------------------------------------------------------------
-# Timestamp every line of stdout/stderr, keep a copy in the terminal (tee), and
-# append everything to the log file. Process substitution gives us cleanly
-# separated OUT/ERR streams inside a single log.
-ts_stream() {
-  local tag="$1" line
-  while IFS= read -r line; do
-    printf '%s [%s] %s\n' "$(date '+%F %T')" "$tag" "$line"
-  done
+# ---------------------------------------------------------
+# Function: log
+# Writes a line with date/time and a level (INFO or ERROR)
+# to the log file. ">>" appends, so old entries are kept.
+# ---------------------------------------------------------
+log() {
+    echo "$(date '+%Y-%m-%d %H:%M:%S') [$1] $2" >> "$LOG"
 }
 
-die() { echo "ERROR: $*" >&2; exit 1; }
-
-# ---------------------------------------------------------------------------
-# Interactive helpers - prompts go to the terminal (/dev/tty), not the log
-# ---------------------------------------------------------------------------
-ask() {                 # ask "<prompt>" <varname>
-  local __val
-  printf '%s' "$1" > /dev/tty
-  IFS= read -r __val < /dev/tty
-  printf -v "$2" '%s' "$__val"
+# ---------------------------------------------------------
+# Function: error_exit
+# Shows an error on the screen (standard error),
+# saves it in the log, and stops the script.
+# ---------------------------------------------------------
+error_exit() {
+    echo "ERROR: $1" >&2
+    log "ERROR" "$1"
+    exit 1
 }
 
-ask_secret() {          # ask_secret "<prompt>" <varname>
-  local __val
-  printf '%s' "$1" > /dev/tty
-  IFS= read -rs __val < /dev/tty
-  printf '\n' > /dev/tty
-  printf -v "$2" '%s' "$__val"
-}
+# ---------------------------------------------------------
+# Step 1: Check that the script is run as root
+# ---------------------------------------------------------
+if [ "$EUID" -ne 0 ]; then
+    echo "ERROR: Please run this script with sudo." >&2
+    exit 1
+fi
 
-# ---------------------------------------------------------------------------
-# Install custom shell profile for a user
-# ---------------------------------------------------------------------------
-install_bashrc() {
-  local user="$1" home group
-  home="$(getent passwd "$user" | cut -d: -f6)"
-  group="$(id -gn "$user")"
+# Create the log file if it does not exist and restrict access
+touch "$LOG"
+chmod 640 "$LOG"
+log "INFO" "Script started by ${SUDO_USER:-root}"
 
-  [[ -n "$home" ]] || die "could not resolve home directory for '$user'"
-  [[ -f "$BASHRC_TEMPLATE" ]] || die "bashrc template not found: $BASHRC_TEMPLATE"
+# ---------------------------------------------------------
+# Step 2: Ask the administrator for the information
+# ---------------------------------------------------------
+echo "-----------------------------------------"
+read -p "Enter a new username: " user_n
+read -p "Enter the primary group: " group_n
+read -s -p "Enter the initial password: " pass_n
+echo
 
-  {
-    printf '\n# --- CMPS4232 custom profile (added %s) ---\n' "$(date '+%F %T')"
-    cat "$BASHRC_TEMPLATE"
-  } >>"${home}/.bashrc" 2>>"$LOG_FILE" || die "could not update ${home}/.bashrc"
+# ---------------------------------------------------------
+# Step 3: Validate the input
+# ---------------------------------------------------------
+echo "-----------------------------------------"
+echo "Checking input..."
 
-  chown "${user}:${group}" "${home}/.bashrc" >>"$LOG_FILE" 2>>"$LOG_FILE" \
-    || die "could not set ownership on ${home}/.bashrc"
+# Username must not be empty
+if [ -z "$user_n" ]; then
+    error_exit "Username cannot be empty."
+fi
 
-  echo "Installed custom .bashrc for '$user'."
-}
+# Username must use only lowercase letters, numbers, _ and -
+if [[ ! "$user_n" =~ ^[a-z_][a-z0-9_-]{0,31}$ ]]; then
+    error_exit "Invalid username '$user_n'. Use lowercase letters, numbers, _ or -."
+fi
 
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
-main() {
-  [[ $EUID -eq 0 ]] || { echo "Must be run as root: sudo $0" >&2; exit 1; }
+# Username must not already exist
+if id "$user_n" &> /dev/null; then
+    error_exit "User '$user_n' already exists."
+fi
 
-  # Set up timestamped, separated logging to both the terminal and the log file.
-  touch "$LOG_FILE" || { echo "Cannot write $LOG_FILE" >&2; exit 1; }
-  exec >  >(ts_stream OUT | tee -a "$LOG_FILE")
-  exec 2>  >(ts_stream ERR | tee -a "$LOG_FILE" >&2)
+# Primary group must not be empty
+if [ -z "$group_n" ]; then
+    error_exit "Primary group cannot be empty."
+fi
 
-  echo "=== sys_init.sh start $(date '+%F %T') ==="
-  echo "Requested by: ${SUDO_USER:-root}"
+# Primary group must already exist
+if ! getent group "$group_n" > /dev/null; then
+    error_exit "Group '$group_n' does not exist."
+fi
 
-  local username pgroup sgroups password pw2 grp
-  local -a _sec uargs
+# Password must not be empty
+if [ -z "$pass_n" ]; then
+    error_exit "Password cannot be empty."
+fi
 
-  # ---- username with validation ----
-  while :; do
-    ask "Enter new username: " username
-    if [[ -z "$username" ]]; then
-      echo "Validation: username cannot be empty."
-    elif [[ ! "$username" =~ $USER_RE ]]; then
-      echo "Validation: invalid username '$username' (lowercase letters, digits, _ and -)."
-    elif id "$username" &>/dev/null; then
-      echo "Validation: user '$username' already exists."
-    else
-      break
-    fi
-  done
-  echo "Username accepted: $username"
+echo "Input is valid."
+log "INFO" "Input validated for user '$user_n' with primary group '$group_n'"
 
-  # ---- primary group with validation ----
-  while :; do
-    ask "Enter primary group: " pgroup
-    if [[ -z "$pgroup" ]]; then
-      echo "Validation: primary group cannot be empty."
-    elif [[ ! "$pgroup" =~ $GROUP_RE ]]; then
-      echo "Validation: invalid group name '$pgroup'."
-    else
-      break
-    fi
-  done
+# ---------------------------------------------------------
+# Step 4: Create the user (home dir + bash shell)
+# >> appends standard output, 2>> appends errors
+# ---------------------------------------------------------
+echo "-----------------------------------------"
+useradd -m -s /bin/bash -g "$group_n" "$user_n" 2>> "$LOG"
 
-  # ---- optional secondary groups (comma-separated) ----
-  ask "Enter secondary groups (comma-separated, blank for none): " sgroups
+if [ $? -ne 0 ]; then
+    error_exit "useradd failed for '$user_n'."
+fi
 
-  # ---- password with validation ----
-  while :; do
-    ask_secret "Enter initial password: " password
-    ask_secret "Confirm password: " pw2
-    if [[ ${#password} -lt $MIN_PW_LEN ]]; then
-      echo "Validation: password must be at least $MIN_PW_LEN characters."
-    elif [[ "$password" != "$pw2" ]]; then
-      echo "Validation: passwords do not match."
-    else
-      break
-    fi
-  done
+echo "User $user_n created."
+log "INFO" "User '$user_n' created (primary group: $group_n)"
 
-  # ---- create the primary group if needed ----
-  if getent group "$pgroup" >/dev/null 2>&1; then
-    echo "Primary group '$pgroup' already exists."
-  else
-    groupadd "$pgroup" >>"$LOG_FILE" 2>>"$LOG_FILE" || die "failed to create group '$pgroup'"
-    echo "Created primary group: $pgroup"
-  fi
+# ---------------------------------------------------------
+# Step 5: Set the initial password
+# ---------------------------------------------------------
+echo "$user_n:$pass_n" | chpasswd 2>> "$LOG"
 
-  # ---- create any secondary groups that are missing ----
-  if [[ -n "$sgroups" ]]; then
-    IFS=',' read -ra _sec <<< "$sgroups"
-    for grp in "${_sec[@]}"; do
-      grp="${grp// /}"
-      [[ -z "$grp" ]] && continue
-      if getent group "$grp" >/dev/null 2>&1; then
-        echo "Secondary group '$grp' already exists."
-      else
-        groupadd "$grp" >>"$LOG_FILE" 2>>"$LOG_FILE" || die "failed to create group '$grp'"
-        echo "Created secondary group: $grp"
-      fi
-    done
-  fi
+if [ $? -ne 0 ]; then
+    userdel -r "$user_n" 2>> "$LOG"
+    error_exit "Could not set the password. User '$user_n' was removed."
+fi
 
-  # ---- create the user account ----
-  uargs=( -m -s "$USER_SHELL" -g "$pgroup" )
-  [[ -n "$sgroups" ]] && uargs+=( -G "$sgroups" )
-  useradd "${uargs[@]}" "$username" >>"$LOG_FILE" 2>>"$LOG_FILE" \
-    || die "useradd failed for '$username'"
-  echo "Created user '$username' (primary group: $pgroup${sgroups:+, secondary: $sgroups})."
+echo "Password set for $user_n."
+log "INFO" "Initial password set for '$user_n'"
 
-  # ---- set the initial password ----
-  echo "$username:$password" | chpasswd >>"$LOG_FILE" 2>>"$LOG_FILE" \
-    || die "failed to set password for '$username'"
-  echo "Initial password set for '$username'."
+# ---------------------------------------------------------
+# Step 6: Force a password change at first login
+# -d 0 means the password has expired (must change)
+# ---------------------------------------------------------
+chage -d 0 "$user_n" 2>> "$LOG"
 
-  # ---- force change on first login + basic aging policy ----
-  chage -d 0 -m 1 -M 90 -W 7 "$username" >>"$LOG_FILE" 2>>"$LOG_FILE" \
-    || die "chage failed for '$username'"
-  echo "Password aging enforced: '$username' must change password on first login."
+if [ $? -ne 0 ]; then
+    userdel -r "$user_n" 2>> "$LOG"
+    error_exit "chage failed. User '$user_n' was removed."
+fi
 
-  # ---- install the custom shell profile ----
-  install_bashrc "$username"
+echo "Password must be changed at first login."
+log "INFO" "Password expiry forced for '$user_n' (chage -d 0)"
 
-  echo "=== sys_init.sh finished OK $(date '+%F %T') ==="
+# ---------------------------------------------------------
+# Step 7: Add aliases and prompt styling to .bashrc
+# >> appends to keep the original .bashrc
+# ---------------------------------------------------------
+cat >> "/home/$user_n/.bashrc" << 'EOF'
 
-  # Give the background tee writers a moment to flush the log before exit.
-  sleep 0.3
-}
+# ---- sys_init custom configuration ----
+# New files are readable/writable by the group
+umask 002
 
-main "$@"
+# Aliases
+alias ll='ls -alF'
+alias la='ls -A'
+alias ..='cd ..'
+alias ...='cd ../..'
+alias grep='grep --color=auto'
+alias update='sudo apt update && sudo apt upgrade -y'
+
+# Prompt: green user@host, blue current directory
+export PS1='\[\e[1;32m\]\u@\h\[\e[0m\]:\[\e[1;34m\]\w\[\e[0m\]\$ '
+
+# History
+export HISTSIZE=5000
+export HISTFILESIZE=10000
+export HISTCONTROL=ignoreboth
+shopt -s histappend
+# ---- end sys_init configuration ----
+EOF
+
+# Fix ownership
+chown "$user_n:$(id -gn "$user_n")" "/home/$user_n/.bashrc" 2>> "$LOG"
+
+echo "Custom .bashrc configured."
+log "INFO" ".bashrc configured for '$user_n'"
+
+# ---------------------------------------------------------
+# Step 8: Show the result
+# ---------------------------------------------------------
+echo "-----------------------------------------"
+echo "User $user_n was created successfully!"
+id "$user_n"
+echo "-----------------------------------------"
+chage -l "$user_n"
+
+log "INFO" "Script finished successfully for '$user_n'"
