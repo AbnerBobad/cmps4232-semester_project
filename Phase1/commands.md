@@ -1,4 +1,4 @@
-# Phase 1 - Required Commands Reference
+# Phase 1 - Required Commands
 
 Environment Foundation & User Security Management.
 

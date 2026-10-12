@@ -16,10 +16,10 @@ Docker services, and backups. Scripts are designed to run on an Ubuntu Server VM
 Each phase folder pairs a `commands.md` (the manual commands, for the report and
 live demonstration) with the actual deliverable script(s).
 
-## Running
+## Running in Ubuntu VM
 
 ```bash
-sudo ./Phase1/sys_init.sh
+sudo ./sys_init.sh
 ```
 
 Provisioning output and errors are timestamped into `/var/log/sys_init.log`.
