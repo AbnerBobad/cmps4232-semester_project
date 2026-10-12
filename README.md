@@ -1,8 +1,15 @@
 # cmps4232-semester_project
+## Group2
 
-Automated Ubuntu Server infrastructure for **CMPS4232 - Systems Administration**.
+Automated Ubuntu Infrastructure, Containerization &
+Operations Management Project **CMPS4232 - Systems Administration**.
 Bash tooling for user/security provisioning, log analytics, process monitoring,
 Docker services, and backups. Scripts are designed to run on an Ubuntu Server VM.
+
+## Group 2 Members:
+1. Abner Bobadilla
+2. Chahiim Pop 
+3. Joseph Koop
 
 ## Structure
 
