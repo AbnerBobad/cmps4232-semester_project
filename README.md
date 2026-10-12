@@ -1,5 +1,4 @@
-# cmps4232-semester_project
-## Group2
+# cmps4232-semester_project - Group2
 
 Automated Ubuntu Infrastructure, Containerization &
 Operations Management Project **CMPS4232 - Systems Administration**.
