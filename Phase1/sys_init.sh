@@ -3,6 +3,7 @@
 # sys_init.sh - Interactive User Provisioning Script
 # CMPS4232 Systems Administration - Phase 1
 #
+#
 # What this script does:
 #   1. Asks for a username, primary group, and password
 #   2. Checks that the input is valid
@@ -11,7 +12,7 @@
 #   5. Adds aliases and a custom prompt to the user's .bashrc
 #   6. Writes everything to /var/log/sys_init.log
 #
-# Usage: sudo ./sys_init.sh
+# Command to run script: sudo ./sys_init.sh
 # =========================================================
 
 LOG="/var/log/sys_init.log"
