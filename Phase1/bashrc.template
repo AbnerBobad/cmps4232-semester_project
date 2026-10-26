@@ -9,14 +9,8 @@ alias la='ls -A'
 alias ..='cd ..'
 alias ...='cd ../..'
 alias grep='grep --color=auto'
-# OPTIONAL alias from the earlier version; not required by the rubric:
 # alias update='sudo apt update && sudo apt upgrade -y'
 
 # Prompt styling: green user@host and blue current directory
 export PS1='\[\e[1;32m\]\u@\h\[\e[0m\]:\[\e[1;34m\]\w\[\e[0m\]\$ '
 
-# OPTIONAL history settings are not required by the rubric:
-# export HISTSIZE=5000
-# export HISTFILESIZE=10000
-# export HISTCONTROL=ignoreboth
-# shopt -s histappend
