@@ -52,7 +52,7 @@ for group in "${PROJECT_GROUPS[@]}"; do
     fi
 
     directory="/srv/$group"
-    run_command "Created directory $directory" mkdir -p "$directory" || exit 1
+    run_command "Ensured directory exists: $directory" mkdir -p "$directory" || exit 1
     run_command "Set owner and group root:$group on $directory" chown "root:$group" "$directory" || exit 1
     # 2770 means owner/group can use the directory and other users have no access.
     # The leading 2 makes new items inherit the shared directory's group.

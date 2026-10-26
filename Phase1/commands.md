@@ -2,48 +2,83 @@
 
 Environment Foundation & User Security Management.
 
-These are the raw CLI commands used to build and verify the Phase 1 hierarchy.
-`sys_init.sh` automates the user-provisioning portion; this file is the manual
-reference for the report and the live demonstration.
+This guide follows the order for the current files in this folder:
 
-## 1. Create the secondary groups
+- `setup_srv.sh` creates the project groups and shared `/srv` directories.
+- `sys_init.sh` creates each user with its primary group, sets the initial
+  password, forces a password change at first login, and configures `.bashrc`.
+- The `usermod` commands below add each user's required secondary group.
+
+Run these commands on the Ubuntu server from the `Phase1` folder.
+
+## 1. Make the scripts executable
 
 ```bash
-sudo groupadd sysadmins
-sudo groupadd developers
-sudo groupadd auditors
+chmod +x setup_srv.sh sys_init.sh
+```
 
-# verify
+## 2. Create the groups and shared directories
+
+Run the setup script once:
+
+```bash
+sudo ./setup_srv.sh
+```
+
+It creates `sysadmins`, `developers`, and `auditors` if they do not already
+exist. It creates `/srv/sysadmins`, `/srv/developers`, and `/srv/auditors`, sets
+each directory's owner to `root` and its group to the matching project group,
+then applies mode `2770`.
+
+Mode `2770` gives the owner and group read, write, and directory access. Other
+users receive no access. The leading `2` is the SGID bit, which makes new items
+inherit the shared directory's group.
+
+Verify the setup:
+
+```bash
 getent group sysadmins developers auditors
+ls -ld /srv/sysadmins /srv/developers /srv/auditors
+stat -c '%a %U %G %n' /srv/sysadmins /srv/developers /srv/auditors
 ```
 
-## 2. Provision users (primary + secondary membership)
+Expected `stat` results are mode `2770`, owner `root`, and the corresponding
+group name for each directory. In `ls -ld`, the permissions should look like
+`drwxrws---`.
 
-### 2.1 Add new users (home dir (-m) + bash shell (-s), (-N) prevents personal group creation)
+## 3. Create each team member with a primary group
+
+Run the interactive script once for each user:
 
 ```bash
-sudo useradd -m -s /bin/bash -N abnerbobadilla
-sudo useradd -m -s /bin/bash -N chahiimpop
-sudo useradd -m -s /bin/bash -N josephkoop
+sudo ./sys_init.sh
 ```
 
-### 2.2 Assign primary group (-g) and secondary groups (-aG - appends secondary groups)
+Enter the username, primary group, and initial password when prompted. The
+script checks the username and group, asks you to confirm the password, creates
+the account, configures the profile, and requires a password change at first
+login. Repeat the command for the other team members.
+
+User assignment Example:
+
+| Username | Primary group | Secondary group |
+|---|---|---|
+| `abnerbobadilla` | `sysadmins` | `developers` |
+| `chahiimpop` | `developers` | `auditors` |
+| `josephkoop` | `auditors` | `sysadmins` |
+
+## 4. Add the secondary group memberships
+
+After creating the users, run these commands. `-aG` adds a secondary group and
+keeps the user's primary group unchanged. Use this if in initial Setup no secondary user was added.
 
 ```bash
-sudo usermod -g sysadmins -aG developers abnerbobadilla
-sudo usermod -g developers -aG auditors chahiimpop
-sudo usermod -g auditors -aG sysadmins josephkoop
+sudo usermod -aG developers abnerbobadilla
+sudo usermod -aG auditors chahiimpop
+sudo usermod -aG sysadmins josephkoop
 ```
 
-### 2.3 Set initial passwords
-
-```bash
-sudo passwd abnerbobadilla
-sudo passwd chahiimpop
-sudo passwd josephkoop
-```
-
-### 2.4 Verify
+Verify each account's primary and secondary groups:
 
 ```bash
 id abnerbobadilla
@@ -51,41 +86,19 @@ id chahiimpop
 id josephkoop
 ```
 
-## 3. Shared `/srv` directories + least-privilege permissions
+## 5. Verify password expiry and the provisioning log
+
+For each newly created user, verify the forced password change. For example:
 
 ```bash
-sudo mkdir -p /srv/sysadmins /srv/developers /srv/auditors
-
-# Apply strict directory ownership (chown) - owner=root, group=matching group
-sudo chown root:sysadmins  /srv/sysadmins
-sudo chown root:developers /srv/developers
-sudo chown root:auditors   /srv/auditors
-
-# Apply file permission bits (chmod)
-# 770 = owner/group rwx, others none
-# 2770 = SGID set, so new files inherit the directory's group
-# This allows all group members to edit files created by their teammates
-sudo chmod 2770 /srv/sysadmins /srv/developers /srv/auditors
-
-# verify (deliverable screenshot)
-ls -ld /srv/sysadmins /srv/developers /srv/auditors
+sudo chage -l abnerbobadilla
 ```
 
-## 4. Run the interactive provisioning script
-
-```bash
-sudo ./sys_init.sh
-```
-
-## 5. Verify enforced password aging (deliverable)
-
-```bash
-sudo chage -l <username>
-# expect: Last password change : password must be changed
-```
-
-## 6. Inspect the provisioning log (deliverable)
+The output should say the password must be changed. Then display the log:
 
 ```bash
 sudo tail -n 40 /var/log/sys_init.log
 ```
+
+The log has timestamps and separate `[INFO stdout]` and `[ERROR stderr]` entries.
+The script also displays the latest log lines when it finishes.

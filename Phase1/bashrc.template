@@ -1,16 +1,22 @@
-# --- Aliases ---
+# Profile settings added by sys_init.sh for new project users.
+# A umask of 007 keeps files private from unrelated users while allowing the
+# user's group to work with files in the setgid /srv shared directories.
+umask 007
+
+# Aliases
 alias ll='ls -alF'
 alias la='ls -A'
 alias ..='cd ..'
 alias ...='cd ../..'
 alias grep='grep --color=auto'
-alias update='sudo apt update && sudo apt upgrade -y'
+# OPTIONAL alias from the earlier version; not required by the rubric:
+# alias update='sudo apt update && sudo apt upgrade -y'
 
-# --- Prompt styling: green user@host, blue working directory ---
+# Prompt styling: green user@host and blue current directory
 export PS1='\[\e[1;32m\]\u@\h\[\e[0m\]:\[\e[1;34m\]\w\[\e[0m\]\$ '
 
-# --- History hardening ---
-export HISTSIZE=5000
-export HISTFILESIZE=10000
-export HISTCONTROL=ignoreboth
-shopt -s histappend
+# OPTIONAL history settings are not required by the rubric:
+# export HISTSIZE=5000
+# export HISTFILESIZE=10000
+# export HISTCONTROL=ignoreboth
+# shopt -s histappend
