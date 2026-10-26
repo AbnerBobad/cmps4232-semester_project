@@ -1,31 +1,61 @@
-# cmps4232-semester_project - Group2
+# CMPS4232 Semester Project
 
-Automated Ubuntu Infrastructure, Containerization &
-Operations Management Project **CMPS4232 - Systems Administration**.
-Bash tooling for user/security provisioning, log analytics, process monitoring,
-Docker services, and backups. Scripts are designed to run on an Ubuntu Server VM.
+## Automated Ubuntu Infrastructure, Containerization, and Operations Management
 
-## Group 2 Members:
-1. Abner Bobadilla
-2. Chahiim Pop 
-3. Joseph Koop
+**Course:** CMPS4232 - Systems Administration  
+**Group:** 2
 
-## Structure
+This repository contains Bash tools and configuration notes for the semester
+project. The scripts are intended for an Ubuntu Server virtual machine.
 
-- `Phase1/` - Environment foundation & user security management
-  - `commands.md` - reference CLI commands used to build and verify the hierarchy
-  - `sys_init.sh` - interactive user-provisioning script (deliverable)
-  - `bashrc.template` - custom shell profile appended by `sys_init.sh`
-- `Phase2/` - Log analytics, regex & job automation
-- `Phase3/` - Containerization, networking & disaster recovery
+## Project members
 
-Each phase folder pairs a `commands.md` (the manual commands, for the report and
-live demonstration) with the actual deliverable script(s).
+- Abner Bobadilla
+- Chahiim Pop
+- Joseph Koop
 
-## Running in Ubuntu VM
+## Repository structure
+
+### Phase 1 - Environment Foundation and User Security
+
+- `Phase1/setup_srv.sh` creates the project groups and shared `/srv` directories.
+- `Phase1/sys_init.sh` provisions user accounts and configures their Bash profiles.
+- `Phase1/bashrc.template` contains the profile settings used by the provisioning script.
+- `Phase1/commands.md` documents setup, group membership, and verification.
+
+### Phase 2 - Log Analytics, Regex, and Job Automation
+
+- `Phase2/log_analyzer.sh` displays authentication findings and appends a timestamp and process list to the audit report.
+- `Phase2/process_watchdog.sh` monitors a named process and lowers its priority when configured limits are exceeded.
+- `Phase2/commands.md` documents execution, cron scheduling, watchdog demonstration, and evidence collection.
+- `Phase2/cron_entry.example` shows the midnight cron entry format.
+
+### Phase 3 - Containerization, Networking, and Disaster Recovery
+
+Phase 3 implementation is not included in this repository version.
+
+## Phase 1 quick start
+
+Run these commands from `Phase1/`:
 
 ```bash
+chmod +x setup_srv.sh sys_init.sh
+sudo ./setup_srv.sh
 sudo ./sys_init.sh
 ```
 
-Provisioning output and errors are timestamped into `/var/log/sys_init.log`.
+Additional setup, membership, and evidence instructions are in `Phase1/commands.md`.
+
+## Phase 2 quick start
+
+Run these commands from `Phase2/`:
+
+```bash
+chmod +x log_analyzer.sh process_watchdog.sh
+sudo ./log_analyzer.sh
+```
+
+Cron installation, watchdog usage, and evidence instructions are in
+`Phase2/commands.md`.
+
+

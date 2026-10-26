@@ -1,0 +1,4 @@
+# Root crontab example for Phase 2
+# ./log_analyzer.sh
+# Install the resulting line with: sudo crontab -e
+0 0 * * * /bin/bash /absolute/path/to/Phase2/log_analyzer.sh >> /var/log/log_analyzer_cron.log 2>&1
