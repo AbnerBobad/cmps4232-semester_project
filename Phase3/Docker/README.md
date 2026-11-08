@@ -31,7 +31,7 @@ docker --version          # Verify that Docker is installed
 ```
 
 We use `sudo` with Docker below, so you do **not** have to deal with group
-membership.
+membership. 
 
 ---
 
@@ -226,12 +226,16 @@ sudo docker ps --format 'table {{.Names}}\t{{.Status}}'
 
 ```bash
 sudo docker ps                      # running containers
+sudo docker ps -a                   # include stopped ones
 sudo docker logs dashboard          # container logs
+sudo docker logs -f dashboard       # follow logs live (Ctrl+C to exit)
 sudo docker inspect dashboard       # full config / limits / mounts
 sudo docker exec -it dashboard sh   # shell inside the container
 sudo docker stop dashboard          # stop it
 sudo docker start dashboard         # start it
 sudo docker restart dashboard       # restart container
 sudo docker rm -f dashboard         # remove container (host data survives)
-sudo ~/phase3/deploy_dashboard.sh   #recreate the container
+sudo ~/phase3/deploy_dashboard.sh   # recreate the container
+sudo docker images                  # list images
+sudo docker stats --no-stream       # CPU / memory usage and limits
 ```
