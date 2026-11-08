@@ -16,18 +16,18 @@ metrics to (`/metrics/net_status.html`).
 | `html/index.html` | Landing page served by NGINX |
 | `README.md` | This guide |
 
-> Copy this whole folder to the Ubuntu server before starting (e.g. to `~/phase3`).
+> All files must be inside a `~/phase3` folder.
 
 ---
 
-## Step 0 - Prerequisites
+## Prerequisites
 
 Install Docker and `curl`, and make sure the daemon is running:
 
 ```bash
 sudo apt update && sudo apt install -y docker.io curl
 sudo systemctl enable --now docker
-docker --version          # screenshot-worthy proof Docker is installed
+docker --version          # Verify that Docker is installed
 ```
 
 We use `sudo` with Docker below, so you do **not** have to deal with group
@@ -98,8 +98,6 @@ sudo docker build -t sysadmin-dashboard:1.0 .
 sudo docker images sysadmin-dashboard
 ```
 
-**Screenshot this** - it proves the image built.
-
 ---
 
 ## Step 4 - Run the container
@@ -127,11 +125,9 @@ sudo docker run -d \
 | `--memory-swap 128m` | Equal to memory, so no swap is allowed (a true hard cap) |
 | `-v host:container` | Bind mount |
 
-**Screenshot this** - it proves the container is running.
-
 ---
 
-## Optional - Reproducible deployment script
+## Reproducible deployment script
 
 Save this as `~/phase3/deploy_dashboard.sh`. It rebuilds the image and
 (re)creates the container with identical settings every time.
@@ -162,13 +158,15 @@ docker run -d --name "$NAME" --restart unless-stopped \
 docker ps --filter "name=$NAME"
 ```
 
+Making the file Executable, and running the script:
+
 ```bash
 chmod +x ~/phase3/deploy_dashboard.sh && sudo ~/phase3/deploy_dashboard.sh
 ```
 
 ---
 
-## Verification (screenshot these)
+## Verification 
 
 ```bash
 # 1. Running, ports, mounts, health (the key screenshot)
@@ -182,8 +180,8 @@ curl -sI http://localhost:8080/ | grep -i x-dashboard-env
 sudo docker exec dashboard env | grep -E 'DASHBOARD_ENV|SERVER_NAME'
 
 # 4. Memory limit (bytes) and live usage
-sudo docker inspect -f 'Memory limit: {{.HostConfig.Memory}} bytes' dashboard   # 134217728
-sudo docker stats --no-stream dashboard                                         # LIMIT shows 128MiB
+sudo docker inspect -f 'Memory limit: {{.HostConfig.Memory}} bytes' dashboard   
+sudo docker stats --no-stream dashboard                                         
 
 # 5. Restart policy and health status
 sudo docker inspect -f '{{.HostConfig.RestartPolicy.Name}}' dashboard
@@ -191,11 +189,11 @@ sudo docker inspect -f '{{.State.Health.Status}}' dashboard
 ```
 
 If Docker prints a "swap limit support" warning, your kernel is not applying
-the swap cap. It is harmless for the demo, and `--memory` still works.
+the swap cap.
 
 ---
 
-## Persistence test (screenshot this)
+## Persistence test
 
 ```bash
 # Write a file from INSIDE the container into the mounted folder
@@ -208,8 +206,8 @@ curl http://localhost:8080/metrics/persist_test.txt
 # DESTROY the container entirely, then recreate it
 sudo docker rm -f dashboard
 sudo ~/phase3/deploy_dashboard.sh
-curl http://localhost:8080/metrics/persist_test.txt     # still there!
-ls -l /srv/dashboard/metrics/                           # also visible on the host
+curl http://localhost:8080/metrics/persist_test.txt     
+ls -l /srv/dashboard/metrics/                           
 ```
 
 ---
@@ -219,12 +217,12 @@ ls -l /srv/dashboard/metrics/                           # also visible on the ho
 ```bash
 sudo systemctl restart docker
 sleep 5
-sudo docker ps --format 'table {{.Names}}\t{{.Status}}'   # "Up a few seconds": it came back automatically
+sudo docker ps --format 'table {{.Names}}\t{{.Status}}'   
 ```
 
 ---
 
-## Quick reference - common commands
+## Common commands
 
 ```bash
 sudo docker ps                      # running containers
@@ -232,5 +230,8 @@ sudo docker logs dashboard          # container logs
 sudo docker inspect dashboard       # full config / limits / mounts
 sudo docker exec -it dashboard sh   # shell inside the container
 sudo docker stop dashboard          # stop it
-sudo docker rm -f dashboard         # remove it (host data survives)
+sudo docker start dashboard         # start it
+sudo docker restart dashboard       # restart container
+sudo docker rm -f dashboard         # remove container (host data survives)
+sudo ~/phase3/deploy_dashboard.sh   #recreate the container
 ```
