@@ -1,0 +1,24 @@
+server {
+    listen 80;
+    server_name ${SERVER_NAME};
+
+    root  /usr/share/nginx/html;
+    index index.html;
+
+    # Proves the -e environment variable reached NGINX (visible with curl -I)
+    add_header X-Dashboard-Env "${DASHBOARD_ENV}" always;
+
+    # Lightweight endpoint used by the Docker HEALTHCHECK
+    location = /health {
+        access_log off;
+        default_type text/plain;
+        return 200 "OK\n";
+    }
+
+    # Mounted host folder: net_check.sh writes here
+    location /metrics/ {
+        autoindex on;
+        add_header Cache-Control "no-store" always;
+        add_header X-Dashboard-Env "${DASHBOARD_ENV}" always;
+    }
+}
