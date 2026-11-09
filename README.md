@@ -32,23 +32,7 @@ project. The scripts are intended for an Ubuntu Server virtual machine.
 
 ### Phase 3 - Containerization, Networking, and Disaster Recovery
 
-- `Phase3/Docker/` builds and runs the NGINX **SysAdmin Health Dashboard** with
-  host port mapping, environment variables, a memory limit, and a persistent
-  volume mount.
-  - `Phase3/Docker/Dockerfile` builds the image.
-  - `Phase3/Docker/nginx/default.conf.template` provides the NGINX configuration
-    (variables are filled in at container start).
-  - `Phase3/Docker/html/index.html` is the dashboard landing page.
-  - `Phase3/Docker/deploy_dashboard.sh` rebuilds the image and recreates the
-    container reproducibly.
-  - `Phase3/Docker/README.md` is the full build, run, verification, and
-    persistence guide.
-- `Phase3/sys_backup.sh` creates timestamped compressed archives of host
-  configuration, system logs, and Docker volumes, with priority throttling.
-- `Phase3/net script/net_check.sh` collects interface, port, and connectivity
-  metrics and appends them to the dashboard's mounted metrics folder.
-- `Phase3/net script/README.md` documents the network diagnostics and how they
-  reach the web dashboard.
+Phase 3 implementation is not included in this repository version.
 
 ## Phase 1 quick start
 
@@ -73,30 +57,5 @@ sudo ./log_analyzer.sh
 
 Cron installation, watchdog usage, and evidence instructions are in
 `Phase2/commands.md`.
-
-## Phase 3 quick start
-
-Build and run the dashboard from `Phase3/Docker/`:
-
-```bash
-cd Phase3/Docker
-chmod +x deploy_dashboard.sh
-sudo ./deploy_dashboard.sh
-```
-
-Then verify it is running:
-
-```bash
-sudo docker ps
-curl -s http://localhost:8080/health
-curl -sI http://localhost:8080/ | grep -i x-dashboard-env
-```
-
-Open `http://localhost:8080/` for the dashboard and
-`http://localhost:8080/metrics/` for the network reports.
-
-Build, port, memory, persistence, and evidence steps are in
-`Phase3/Docker/README.md`. The backup utility is `Phase3/sys_backup.sh` and the
-network diagnostics live in `Phase3/net script/net_check.sh`.
 
 
