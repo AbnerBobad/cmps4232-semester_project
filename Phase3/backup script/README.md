@@ -29,6 +29,8 @@ The script will print "Backup complete." at the end if successful.
 
 ## 4. Verify
 
+Have top or htop open in separate terminal to view renice change.
+
 ```bash
 cd ~/backups
 ls -la          # to show timestamped backup files
