@@ -88,6 +88,9 @@ END{
         print "Root escalations by " user, ": " count[user]
 }' | sed 's/^/    /'
 
+echo "Root escalation events (most recent):"
+sudo grep -iaE 'sudo.*session opened for user root' "$log" | grep -v 'COMMAND' | tail -n 5 | sed 's/^/    /'
+
 # ---------------------------------------------------------
 # Step 4: Identify the top memory-consuming processes
 # top -b runs in batch mode without interactive display
