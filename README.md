@@ -43,8 +43,9 @@ project. The scripts are intended for an Ubuntu Server virtual machine.
     container reproducibly.
   - `Phase3/Docker/README.md` is the full build, run, verification, and
     persistence guide.
-- `Phase3/sys_backup.sh` creates timestamped compressed archives of host
-  configuration, system logs, and Docker volumes, with priority throttling.
+- `Phase3/backup script/sys_backup.sh` creates timestamped compressed archives
+  of host configuration, system logs, and Docker volumes, with priority
+  throttling.
 - `Phase3/net script/net_check.sh` collects interface, port, and connectivity
   metrics and appends them to the dashboard's mounted metrics folder.
 - `Phase3/net script/README.md` documents the network diagnostics and how they
@@ -74,7 +75,7 @@ sudo ./log_analyzer.sh
 Cron installation, watchdog usage, and evidence instructions are in
 `Phase2/commands.md`.
 
-## Phase 3 quick start
+## Phase 3 quick start (matches the Phase 4 live demo)
 
 ### 1. One-time setup (Docker, curl, and the persistent data folder)
 
@@ -87,20 +88,17 @@ sudo chown -R root:sysadmins /srv/dashboard      # requires the sysadmins group 
 sudo find /srv/dashboard -type d -exec chmod 2775 {} +
 ```
 
-### 2. Build and run the dashboard
+### 2. Docker service - build, run, verify
 
-Run these commands from the repository root:
+Phase 4: *"Run docker ps showing active container bindings."*
 
 ```bash
 cd Phase3/Docker
 chmod +x deploy_dashboard.sh
 sudo ./deploy_dashboard.sh
-```
 
-### 3. Verify it is running
-
-```bash
-sudo docker ps
+# Key Phase 4 screenshot: running container, ports, mounts
+sudo docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}\t{{.Mounts}}'
 curl -s http://localhost:8080/health
 curl -sI http://localhost:8080/ | grep -i x-dashboard-env
 ```
@@ -108,27 +106,63 @@ curl -sI http://localhost:8080/ | grep -i x-dashboard-env
 Open `http://localhost:8080/` for the dashboard and
 `http://localhost:8080/metrics/` for the network reports.
 
-### 4. Run the backup utility
+### 3. Verify persistence across a container restart
+
+Phase 4: *"verify persistence by demonstrating volume data survival across container restarts."*
 
 ```bash
-cd ..                                  # back to Phase3/
-chmod +x sys_backup.sh
-sudo ./sys_backup.sh
-sudo ls -lh /var/backups/sysadmin/
+sudo docker exec dashboard sh -c 'echo "persisted at $(date)" > /usr/share/nginx/html/metrics/persist_test.txt'
+sudo docker restart dashboard
+curl http://localhost:8080/metrics/persist_test.txt
+
+sudo docker rm -f dashboard
+sudo ./deploy_dashboard.sh
+curl http://localhost:8080/metrics/persist_test.txt   # still there
+ls -l /srv/dashboard/metrics/
 ```
 
-### 5. Run the network diagnostics
+### 4. Backup utility - run and verify
 
-The dashboard container must be running first (step 2).
+Phase 4: *"Execute ./sys_backup.sh and verify archive creation."*
 
 ```bash
-cd "net script"
+cd "Phase3/backup script"
+chmod +x sys_backup.sh
+sudo ./sys_backup.sh                    # prints "Backup complete."
+
+ls -lah ~/backups
+tar -tvf ~/backups/system_backup_*.tar.gz | head -20
+gzip -t ~/backups/system_backup_*.tar.gz && echo "archive OK"
+```
+
+To prove the `renice` during the run, in a second terminal:
+
+```bash
+watch -n1 'ps -eo pid,ni,cmd | grep "[t]ar -czf"'
+```
+
+### 5. Network diagnostics - run and query the dashboard endpoint
+
+Phase 4: *"Execute ./net_check.sh and query the container endpoint using curl http://localhost:8080/metrics/net_status.html."*
+
+Align the script with the Docker mount and the Phase 4 endpoint once:
+
+```bash
+cd "Phase3/net script"
+sed -i 's|^DASH_DATA=.*|DASH_DATA="/srv/dashboard/metrics"|' net_check.sh
+sed -i 's|^OUTPUT_FILE=.*|OUTPUT_FILE="$DASH_DATA/net_status.html"|' net_check.sh
+sed -i 's|^CONTAINER=.*|CONTAINER="dashboard"|' net_check.sh
+```
+
+Then run it and verify the endpoint:
+
+```bash
 chmod +x net_check.sh
 sudo ./net_check.sh
-curl http://localhost:8080/metrics/net_status.html
+curl -s http://localhost:8080/metrics/net_status.html | head -40
 ```
 
 Build, port, memory, persistence, and evidence steps are in
-`Phase3/Docker/README.md`. Network diagnostic details are in
-`Phase3/net script/README.md`.
+`Phase3/Docker/README.md`. Backup details are in `Phase3/backup script/README.md`
+and network diagnostic details are in `Phase3/net script/README.md`.
 
